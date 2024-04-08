@@ -1,0 +1,21 @@
+# course config files
+*.yaml
+
+# gradle
+.gradle/
+/gradle/
+/gradlew
+/gradlew.bat
+build
+out
+
+# idea config
+.idea
+
+# stages
+/Traffic Light Simulator with Java/Open the control panel/
+/Traffic Light Simulator with Java/Set up the traffic light/
+/Traffic Light Simulator with Java/Oops, wrong button/
+/Traffic Light Simulator with Java/Like a clockwork/
+/Traffic Light Simulator with Java/Over and over again/
+/Traffic Light Simulator with Java/Red, yellow, green/
