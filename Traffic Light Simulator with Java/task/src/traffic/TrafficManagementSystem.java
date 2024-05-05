@@ -1,21 +1,29 @@
 package traffic;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 public class TrafficManagementSystem {
     private final UserInterface ui = new ConsoleUI();
     private boolean inSystemState = false;
     private boolean running = true;
+    private int roads;
+    private int interval;
+    private Queue<String> deque;
 
     public void start() {
         ui.print(Messages.WELCOME);
 
         ui.print(Messages.INPUT_ROADS);
-        int roads = getValidNum();
+        roads = getValidNum();
 
         ui.print(Messages.INPUT_INTERVAL);
-        int interval = getValidNum();
+        interval = getValidNum();
 
-        Thread counter = getCounter(roads, interval);
+        Thread counter = getCounter();
         counter.start();
+
+        deque = new ArrayDeque<>(roads);
 
         while (true) {
             ui.clearScreen();
@@ -30,8 +38,24 @@ public class TrafficManagementSystem {
                         running = false;
                         return;
                     }
-                    case "1" -> ui.print(Messages.ADD);
-                    case "2" -> ui.print(Messages.DEL);
+                    case "1" -> {
+                        ui.print(Messages.ROAD_NAME);
+                        String name = ui.readInput();
+
+                        if (deque.size() >= roads) {
+                            ui.print(Messages.FULL);
+                        } else {
+                            deque.offer(name);
+                            ui.printf(Messages.ADD, name);
+                        }
+                    }
+                    case "2" -> {
+                        if (deque.isEmpty()) {
+                            ui.print(Messages.EMPTY);
+                        } else {
+                            ui.printf(Messages.DEL, deque.poll());
+                        }
+                    }
                     case "3" -> inSystemState = true;
                     default -> ui.print(Messages.INCORRECT);
                 }
@@ -42,7 +66,7 @@ public class TrafficManagementSystem {
         }
     }
 
-    private Thread getCounter(int roads, int interval) {
+    private Thread getCounter() {
         Thread counter = new Thread(() -> {
             long time = 0;
             try {
@@ -52,7 +76,8 @@ public class TrafficManagementSystem {
 
                     if (inSystemState) {
                         ui.clearScreen();
-                        ui.printf(Messages.COUNTER, time, roads, interval);
+                        ui.printf(Messages.COUNTER, time, roads, interval,
+                                String.join("\n", deque));
                     }
                 }
             } catch (InterruptedException e) {
