@@ -1,21 +1,23 @@
 package traffic;
 
 import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.Deque;
+import java.util.stream.Collectors;
 
 public class TrafficManagementSystem {
     private final UserInterface ui = new ConsoleUI();
     private boolean inSystemState = false;
     private boolean running = true;
-    private int roads;
+    private int maxRoads;
     private int interval;
-    private Queue<String> deque;
+    private Deque<Road> roads;
+    private int globalTime = 0;
 
     public void start() {
         ui.print(Messages.WELCOME);
 
         ui.print(Messages.INPUT_ROADS);
-        roads = getValidNum();
+        maxRoads = getValidNum();
 
         ui.print(Messages.INPUT_INTERVAL);
         interval = getValidNum();
@@ -23,12 +25,11 @@ public class TrafficManagementSystem {
         Thread counter = getCounter();
         counter.start();
 
-        deque = new ArrayDeque<>(roads);
+        roads = new ArrayDeque<>(maxRoads);
 
         while (true) {
-            ui.clearScreen();
-
             if (!inSystemState) {
+                ui.clearScreen();
                 ui.print(Messages.MENU);
                 String mode = ui.readInput();
 
@@ -39,22 +40,10 @@ public class TrafficManagementSystem {
                         return;
                     }
                     case "1" -> {
-                        ui.print(Messages.ROAD_NAME);
-                        String name = ui.readInput();
-
-                        if (deque.size() >= roads) {
-                            ui.print(Messages.FULL);
-                        } else {
-                            deque.offer(name);
-                            ui.printf(Messages.ADD, name);
-                        }
+                        addRoad();
                     }
                     case "2" -> {
-                        if (deque.isEmpty()) {
-                            ui.print(Messages.EMPTY);
-                        } else {
-                            ui.printf(Messages.DEL, deque.poll());
-                        }
+                        removeRoad();
                     }
                     case "3" -> inSystemState = true;
                     default -> ui.print(Messages.INCORRECT);
@@ -66,18 +55,80 @@ public class TrafficManagementSystem {
         }
     }
 
+    private void addRoad() {
+        ui.print(Messages.ROAD_NAME);
+        String name = ui.readInput();
+
+        if (roads.size() >= maxRoads) {
+            ui.print(Messages.FULL);
+        } else {
+            Road road;
+
+            if (roads.isEmpty()) {
+                road = new Road(name, true, interval);
+            } else {
+                Road lastRoad = roads.getLast();
+                int timeLeft;
+
+                if (lastRoad.isOpen()) {
+                    timeLeft = lastRoad.getTimeRemaining();
+                } else {
+                    timeLeft = lastRoad.getTimeRemaining() + interval;
+                }
+
+                road = new Road(name, false, timeLeft);
+            }
+
+            roads.add(road);
+            ui.printf(Messages.ADD, name);
+        }
+    }
+
+    private void removeRoad() {
+        if (roads.isEmpty()) {
+            ui.print(Messages.EMPTY);
+        } else {
+            Road road = roads.poll();
+            ui.printf(Messages.DEL, road.getName());
+
+            if (!roads.isEmpty()) {
+                if (road.isOpen()) {
+                    int count = 0;
+
+                    for (Road curRoad : roads) {
+                        if (count == 0) {
+                            curRoad.setOpen(true);
+                            curRoad.setTimeRemaining(interval + 1);
+                        } else {
+                            curRoad.setTimeRemaining(count * interval);
+                        }
+
+                        count += 1;
+                    }
+                } else {
+                    for (Road curRoad : roads) {
+                        if (curRoad.isOpen()) {
+                            return;
+                        }
+
+                        curRoad.setTimeRemaining(road.getTimeRemaining() - interval);
+                    }
+                }
+            }
+        }
+    }
+
     private Thread getCounter() {
         Thread counter = new Thread(() -> {
-            long time = 0;
             try {
                 while (running) {
                     Thread.sleep(1000);
-                    time++;
+                    globalTime++;
 
                     if (inSystemState) {
                         ui.clearScreen();
-                        ui.printf(Messages.COUNTER, time, roads, interval,
-                                String.join("\n", deque));
+                        displaySystemState();
+                        updateRoads();
                     }
                 }
             } catch (InterruptedException e) {
@@ -87,6 +138,19 @@ public class TrafficManagementSystem {
 
         counter.setName("QueueThread");
         return counter;
+    }
+
+    private void updateRoads() {
+        if (!roads.isEmpty()) {
+            for (Road road : roads) {
+                road.updateState(roads.size(), interval);
+            }
+        }
+    }
+
+    private void displaySystemState() {
+        ui.printf(Messages.COUNTER, globalTime, maxRoads, interval,
+                roads.stream().map(Road::toString).collect(Collectors.joining("\n")));
     }
 
     private int getValidNum() {

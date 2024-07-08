@@ -7,8 +7,9 @@ public enum Messages {
             ! %ds. have passed since system startup !
             ! Number of roads: %d !
             ! Interval: %d !
-            
+                        
             %s
+                        
             ! Press "Enter" to open menu !
             """),
     DEL("%s deleted!\n"),

@@ -12,7 +12,7 @@ public class ConsoleUI implements UserInterface {
     }
 
     @Override
-    public void printf(Messages message, Object ... args) {
+    public void printf(Messages message, Object... args) {
         System.out.printf(String.valueOf(message), args);
     }
 
